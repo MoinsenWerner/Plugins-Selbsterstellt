@@ -9,6 +9,7 @@ city:
     miner: 1              # Miner suchen nach Erzen unter der Stadt.
     farmer: 1             # Farmer kümmern sich um Felder und Lebensmittel.
     builder: 1            # Baumeister errichten neue Gebäude nach Blaupausen.
+    crafter: 1            # Handwerker verarbeiten Ressourcen zu neuen Gegenständen.
 
 storage:
   chest-radius: 10        # Radius in Blöcken um den Stadtkern, in dem Lagerkisten erkannt und genutzt werden.

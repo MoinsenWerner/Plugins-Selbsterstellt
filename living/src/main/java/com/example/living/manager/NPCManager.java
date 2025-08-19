@@ -134,10 +134,11 @@ public class NPCManager {
 
         // Job-spezifische Optionen
         if (npc.getJob() == Job.WOODCUTTER) {
-            ItemStack tree = new ItemStack(Material.OAK_SAPLING);
+            String type = npc.getTaskParameters().getOrDefault("tree", "OAK");
+            Material saplingMat = Material.matchMaterial(type + "_SAPLING");
+            ItemStack tree = new ItemStack(saplingMat != null ? saplingMat : Material.OAK_SAPLING);
             ItemMeta treeMeta = tree.getItemMeta();
             if (treeMeta != null) {
-                String type = npc.getTaskParameters().getOrDefault("tree", "OAK");
                 treeMeta.displayName(Component.text("Tree: " + type));
                 treeMeta.getPersistentDataContainer().set(npcUuidKey, PersistentDataType.STRING, npc.getUuid().toString());
                 tree.setItemMeta(treeMeta);
@@ -211,11 +212,14 @@ public class NPCManager {
             npc.setActive(!npc.isActive());
             saveNpcSettings(npc);
             openNpcSettingsGui(player, npc);
-        } else if (type == Material.OAK_SAPLING) {
+        } else if (type.name().endsWith("_SAPLING")) {
             String current = npc.getTaskParameters().getOrDefault("tree", "OAK");
             String next = switch (current) {
                 case "OAK" -> "BIRCH";
                 case "BIRCH" -> "SPRUCE";
+                case "SPRUCE" -> "JUNGLE";
+                case "JUNGLE" -> "ACACIA";
+                case "ACACIA" -> "OAK";
                 default -> "OAK";
             };
             npc.setTaskParameter("tree", next);
