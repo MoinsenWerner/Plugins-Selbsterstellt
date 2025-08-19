@@ -1,5 +1,6 @@
 package com.example.nations.model;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -22,5 +23,9 @@ public class NationRegistry {
         Nation nation = new Nation(name, founder);
         nations.put(name.toLowerCase(), nation);
         return nation;
+    }
+
+    public Collection<Nation> getNations() {
+        return nations.values();
     }
 }
