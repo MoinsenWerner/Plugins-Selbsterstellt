@@ -1,6 +1,7 @@
 package com.example.living.npc;
 
 import java.util.UUID;
+import com.example.living.LivingPlugin;
 
 /**
  * Basic representation of an NPC controlled by the plugin.
@@ -16,6 +17,8 @@ public class NPC {
     public NPC(UUID uuid, Job job) {
         this.uuid = uuid;
         this.job = job;
+        LivingPlugin.getInstance().getLogger()
+                .info("NPC created with job " + job + " and UUID " + uuid);
     }
 
     public UUID getUuid() {
@@ -32,6 +35,8 @@ public class NPC {
      * with blocks, inventories and other entities.
      */
     public void performTask() {
+        LivingPlugin.getInstance().getLogger()
+                .info("NPC " + uuid + " performing job " + job + " task.");
         // TODO: implement actual job logic
     }
 }

@@ -1,5 +1,6 @@
 package com.example.living;
 
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
 /**
@@ -11,6 +12,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 public class LivingPlugin extends JavaPlugin {
 
     private static LivingPlugin instance;
+    private String disableReason = "Server shutdown or reload";
 
     @Override
     public void onEnable() {
@@ -21,8 +23,19 @@ public class LivingPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        getLogger().info("Living plugin disabled.");
+        getLogger().info("Living plugin disabled: " + disableReason);
         instance = null;
+    }
+
+    /**
+     * Disable this plugin with a specific reason that will be logged to the console.
+     *
+     * @param reason explanation why the plugin is being disabled
+     */
+    public void disablePlugin(String reason) {
+        this.disableReason = reason;
+        getLogger().warning("Disabling Living plugin: " + reason);
+        Bukkit.getPluginManager().disablePlugin(this);
     }
 
     public static LivingPlugin getInstance() {

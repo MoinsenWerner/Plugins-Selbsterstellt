@@ -1,5 +1,6 @@
 package com.example.living.city;
 
+import com.example.living.LivingPlugin;
 import com.example.living.npc.NPC;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +20,7 @@ public class City {
     public City(String name, Location coreLocation) {
         this.name = name;
         this.coreLocation = coreLocation;
+        LivingPlugin.getInstance().getLogger().info("City created: " + name);
     }
 
     public String getName() {
@@ -35,5 +37,7 @@ public class City {
 
     public void addNpc(NPC npc) {
         npcs.add(npc);
+        LivingPlugin.getInstance().getLogger()
+                .info("NPC with job " + npc.getJob() + " added to city " + name);
     }
 }
