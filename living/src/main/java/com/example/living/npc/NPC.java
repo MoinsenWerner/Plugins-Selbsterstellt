@@ -7,8 +7,11 @@ import java.util.UUID;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.Chest;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Villager;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
 
 import com.example.living.LivingPlugin;
 import com.example.living.city.City;
@@ -75,13 +78,7 @@ public class NPC {
         if (!active) {
             return;
         }
-
-        LivingPlugin plugin = LivingPlugin.getInstance();
-        Entity entity = plugin.getServer().getEntity(uuid);
-        if (!(entity instanceof Villager villager)) {
-            return;
-        }
-
+@@ -75,110 +88,212 @@ public class NPC {
         switch (job) {
             case WOODCUTTER -> performWoodcutterTask(villager);
             case MINER -> performMinerTask(villager);
@@ -173,19 +170,28 @@ public class NPC {
         int logsRequired = 100;
         int stoneRequired = 20;
         int wheatRequired = 10;
-        boolean hasLogs = city.getResource(Material.OAK_LOG) >= logsRequired;
-        boolean hasStone = city.getResource(Material.STONE) >= stoneRequired;
-        boolean hasWheat = city.getResource(Material.WHEAT) >= wheatRequired;
-        if (!(hasLogs && hasStone && hasWheat)) {
+        int logsAvailable = city.getResource(Material.OAK_LOG) + getChestItemCount(Material.OAK_LOG);
+        int stoneAvailable = city.getResource(Material.STONE) + getChestItemCount(Material.STONE);
+        int wheatAvailable = city.getResource(Material.WHEAT) + getChestItemCount(Material.WHEAT);
+        if (logsAvailable < logsRequired || stoneAvailable < stoneRequired || wheatAvailable < wheatRequired) {
             plugin.getLogger().info("NPC " + uuid + " lacks resources to build.");
             return;
         }
-        city.consumeResource(Material.OAK_LOG, logsRequired);
-        city.consumeResource(Material.STONE, stoneRequired);
-        city.consumeResource(Material.WHEAT, wheatRequired);
+        int logsFromCity = Math.min(logsRequired, city.getResource(Material.OAK_LOG));
+        city.consumeResource(Material.OAK_LOG, logsFromCity);
+        removeChestItems(Material.OAK_LOG, logsRequired - logsFromCity);
+
+        int stoneFromCity = Math.min(stoneRequired, city.getResource(Material.STONE));
+        city.consumeResource(Material.STONE, stoneFromCity);
+        removeChestItems(Material.STONE, stoneRequired - stoneFromCity);
+
+        int wheatFromCity = Math.min(wheatRequired, city.getResource(Material.WHEAT));
+        city.consumeResource(Material.WHEAT, wheatFromCity);
+        removeChestItems(Material.WHEAT, wheatRequired - wheatFromCity);
+
         buildSimpleHouse(villager.getLocation());
         taskParameters.put("built", "true");
-        plugin.getLogger().info("NPC " + uuid + " built a house using city resources.");
+        plugin.getLogger().info("NPC " + uuid + " built a house using stored resources.");
     }
 
     private void buildSimpleHouse(Location base) {
@@ -214,6 +220,73 @@ public class NPC {
         for (int x = 0; x < 5; x++) {
             for (int z = 0; z < 5; z++) {
                 base.clone().add(x, 4, z).getBlock().setType(Material.OAK_PLANKS);
+            }
+        }
+    }
+
+    private int getChestItemCount(Material material) {
+        LivingPlugin plugin = LivingPlugin.getInstance();
+        if (city == null) {
+            return 0;
+        }
+        Location core = city.getCoreLocation();
+        if (core == null || core.getWorld() == null) {
+            return 0;
+        }
+        int radius = plugin.getConfig().getInt("storage.chest-radius", 10);
+        int count = 0;
+        for (int x = -radius; x <= radius; x++) {
+            for (int y = -radius; y <= radius; y++) {
+                for (int z = -radius; z <= radius; z++) {
+                    Block block = core.getBlock().getRelative(x, y, z);
+                    if (block.getType() == Material.CHEST) {
+                        Chest chest = (Chest) block.getState();
+                        Inventory inv = chest.getBlockInventory();
+                        for (ItemStack stack : inv.getContents()) {
+                            if (stack != null && stack.getType() == material) {
+                                count += stack.getAmount();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return count;
+    }
+
+    private void removeChestItems(Material material, int amount) {
+        if (amount <= 0 || city == null) {
+            return;
+        }
+        LivingPlugin plugin = LivingPlugin.getInstance();
+        Location core = city.getCoreLocation();
+        if (core == null || core.getWorld() == null) {
+            return;
+        }
+        int radius = plugin.getConfig().getInt("storage.chest-radius", 10);
+        for (int x = -radius; x <= radius && amount > 0; x++) {
+            for (int y = -radius; y <= radius && amount > 0; y++) {
+                for (int z = -radius; z <= radius && amount > 0; z++) {
+                    Block block = core.getBlock().getRelative(x, y, z);
+                    if (block.getType() == Material.CHEST) {
+                        Chest chest = (Chest) block.getState();
+                        Inventory inv = chest.getBlockInventory();
+                        for (int i = 0; i < inv.getSize() && amount > 0; i++) {
+                            ItemStack stack = inv.getItem(i);
+                            if (stack != null && stack.getType() == material) {
+                                int take = Math.min(amount, stack.getAmount());
+                                stack.setAmount(stack.getAmount() - take);
+                                if (stack.getAmount() <= 0) {
+                                    inv.setItem(i, null);
+                                } else {
+                                    inv.setItem(i, stack);
+                                }
+                                amount -= take;
+                            }
+                        }
+                        chest.update();
+                    }
+                }
             }
         }
     }
