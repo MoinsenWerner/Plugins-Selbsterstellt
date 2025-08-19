@@ -13,6 +13,7 @@ import com.example.living.npc.Job;
 import com.example.living.manager.CityManager;
 import com.example.living.manager.NPCManager;
 import com.example.living.listener.CityCoreListener;
+import com.example.living.listener.NpcGuiListener;
 
 /**
  * Main plugin class for the Living NPC city simulation.
@@ -34,6 +35,7 @@ public class LivingPlugin extends JavaPlugin {
         this.cityManager = new CityManager(this);
         this.npcManager = new NPCManager(this);
         getServer().getPluginManager().registerEvents(new CityCoreListener(this), this);
+        getServer().getPluginManager().registerEvents(new NpcGuiListener(this), this);
         NpcCommand npcCommand = new NpcCommand(this);
         getCommand("l-m").setExecutor(npcCommand);
         getCommand("l-m").setTabCompleter(npcCommand);

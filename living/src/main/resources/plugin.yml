@@ -7,4 +7,4 @@ load: POSTWORLD
 commands:
   l-m:
     description: Manage Living NPC tasks
-    usage: /l-m <uuid> <start|stop|set key value>
+    usage: /l-m [uuid start|stop|set key value]

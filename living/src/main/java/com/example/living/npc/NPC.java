@@ -44,8 +44,16 @@ public class NPC {
         taskParameters.put(key, value);
     }
 
+    public Map<String, String> getTaskParameters() {
+        return taskParameters;
+    }
+
     public void setActive(boolean active) {
         this.active = active;
+    }
+
+    public boolean isActive() {
+        return active;
     }
 
     /**
@@ -136,18 +144,40 @@ public class NPC {
 
     private void performBuilderTask(Villager villager) {
         LivingPlugin plugin = LivingPlugin.getInstance();
-        Location loc = villager.getLocation();
-        int radius = 5;
-        for (int x = -radius; x <= radius; x++) {
-            for (int y = 0; y <= radius; y++) {
-                for (int z = -radius; z <= radius; z++) {
-                    Block block = loc.getBlock().getRelative(x, y, z);
-                    if (block.getType() == Material.AIR && block.getRelative(0, -1, 0).getType().isSolid()) {
-                        block.setType(Material.COBBLESTONE);
-                        plugin.getLogger().info("NPC " + uuid + " placed a block.");
-                        return;
+        if (Boolean.parseBoolean(taskParameters.getOrDefault("built", "false"))) {
+            return;
+        }
+        buildSimpleHouse(villager.getLocation());
+        taskParameters.put("built", "true");
+        plugin.getLogger().info("NPC " + uuid + " built a house.");
+    }
+
+    private void buildSimpleHouse(Location base) {
+        // Build a small 5x5 villager-style house
+        for (int x = 0; x < 5; x++) {
+            for (int z = 0; z < 5; z++) {
+                base.clone().add(x, 0, z).getBlock().setType(Material.OAK_PLANKS);
+            }
+        }
+        // walls
+        for (int y = 1; y < 4; y++) {
+            for (int x = 0; x < 5; x++) {
+                for (int z = 0; z < 5; z++) {
+                    if (x == 0 || x == 4 || z == 0 || z == 4) {
+                        base.clone().add(x, y, z).getBlock().setType(Material.OAK_LOG);
                     }
                 }
+            }
+        }
+        // doorway
+        base.clone().add(2, 1, 0).getBlock().setType(Material.AIR);
+        base.clone().add(2, 2, 0).getBlock().setType(Material.AIR);
+        base.clone().add(2, 1, 0).getBlock().setType(Material.OAK_DOOR);
+        base.clone().add(2, 2, 0).getBlock().setType(Material.OAK_DOOR);
+        // roof
+        for (int x = 0; x < 5; x++) {
+            for (int z = 0; z < 5; z++) {
+                base.clone().add(x, 4, z).getBlock().setType(Material.OAK_PLANKS);
             }
         }
     }

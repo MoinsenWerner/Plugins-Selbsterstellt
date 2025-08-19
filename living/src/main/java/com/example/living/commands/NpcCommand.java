@@ -6,6 +6,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
+import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,6 +24,14 @@ public class NpcCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (args.length == 0) {
+            if (sender instanceof Player player) {
+                plugin.getNpcManager().openNpcListGui(player);
+            } else {
+                sender.sendMessage("Player command only");
+            }
+            return true;
+        }
         if (args.length < 2) {
             sender.sendMessage("Usage: /" + label + " <uuid> <start|stop|set <key> <value>>");
             return true;
@@ -42,10 +51,12 @@ public class NpcCommand implements CommandExecutor, TabCompleter {
         switch (args[1].toLowerCase()) {
             case "start" -> {
                 npc.setActive(true);
+                plugin.getNpcManager().saveNpcSettings(npc);
                 sender.sendMessage("NPC tasks started");
             }
             case "stop" -> {
                 npc.setActive(false);
+                plugin.getNpcManager().saveNpcSettings(npc);
                 sender.sendMessage("NPC tasks stopped");
             }
             case "set" -> {
@@ -54,6 +65,7 @@ public class NpcCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 npc.setTaskParameter(args[2], args[3]);
+                plugin.getNpcManager().saveNpcSettings(npc);
                 sender.sendMessage("Parameter set");
             }
             default -> sender.sendMessage("Unknown action");
