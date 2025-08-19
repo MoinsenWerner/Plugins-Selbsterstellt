@@ -78,13 +78,7 @@ public class NPC {
         if (!active) {
             return;
         }
-
-        LivingPlugin plugin = LivingPlugin.getInstance();
-        Entity entity = plugin.getServer().getEntity(uuid);
-        if (!(entity instanceof Villager villager)) {
-            return;
-        }
-
+@@ -75,110 +88,212 @@ public class NPC {
         switch (job) {
             case WOODCUTTER -> performWoodcutterTask(villager);
             case MINER -> performMinerTask(villager);

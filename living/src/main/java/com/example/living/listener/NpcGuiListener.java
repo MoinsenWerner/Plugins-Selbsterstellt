@@ -37,4 +37,3 @@ public class NpcGuiListener implements Listener {
         }
     }
 }
-
