@@ -20,3 +20,25 @@ npc:
 
 collector:
   pickup-radius: 5        # Radius, in dem Sammler nach Items suchen.
+
+woodcutter:
+  logs:                  # Liste erlaubter Baumstämme, die gefällt werden dürfen
+    - OAK_LOG
+    - BIRCH_LOG
+
+miner:
+  blocks:                # Liste der Blöcke, die Miner abbauen können
+    - STONE
+    - SAND
+    - GRASS_BLOCK
+    - DIRT
+
+farmer:
+  harvest:               # Erntebare Pflanzen für Farmer
+    - WHEAT
+  plant:                 # Pflanzen, die Farmer setzen dürfen
+    - OAK_SAPLING
+    - BIRCH_SAPLING
+    - SPRUCE_SAPLING
+    - JUNGLE_SAPLING
+    - ACACIA_SAPLING

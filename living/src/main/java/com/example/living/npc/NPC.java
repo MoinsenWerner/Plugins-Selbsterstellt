@@ -1,6 +1,7 @@
 package com.example.living.npc;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -14,6 +15,8 @@ import org.bukkit.entity.Item;
 import org.bukkit.entity.Villager;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
 
 import com.example.living.LivingPlugin;
 import com.example.living.city.City;
@@ -103,12 +106,8 @@ public class NPC {
 
     private void performWoodcutterTask(Villager villager) {
         LivingPlugin plugin = LivingPlugin.getInstance();
-        String tree = taskParameters.getOrDefault("tree", "OAK").toUpperCase();
-        Material logMaterial = Material.matchMaterial(tree + "_LOG");
-        if (logMaterial == null) {
-            plugin.getLogger().warning("Unknown tree type: " + tree);
-            return;
-        }
+        List<Material> logs = plugin.getWoodcutterLogs();
+        if (logs.isEmpty()) return;
 
         Location loc = villager.getLocation();
         int radius = 5;
@@ -116,10 +115,10 @@ public class NPC {
             for (int y = -1; y <= radius; y++) {
                 for (int z = -radius; z <= radius; z++) {
                     Block block = loc.getBlock().getRelative(x, y, z);
-                    if (block.getType() == logMaterial) {
+                    if (logs.contains(block.getType())) {
                         block.breakNaturally();
-                        addChestItems(logMaterial, 1);
-                        plugin.getLogger().info("NPC " + uuid + " cut a " + tree + " log.");
+                        addChestItems(block.getType(), 1);
+                        plugin.getLogger().info("NPC " + uuid + " cut a " + block.getType().name().toLowerCase() + ".");
                         return;
                     }
                 }
@@ -131,18 +130,17 @@ public class NPC {
         LivingPlugin plugin = LivingPlugin.getInstance();
         Location loc = villager.getLocation();
         int radius = 5;
-        Material[] mineables = {Material.STONE, Material.SAND, Material.GRASS_BLOCK, Material.DIRT};
+        List<Material> mineables = plugin.getMinerBlocks();
+        if (mineables.isEmpty()) return;
         for (int x = -radius; x <= radius; x++) {
             for (int y = -radius; y <= radius; y++) {
                 for (int z = -radius; z <= radius; z++) {
                     Block block = loc.getBlock().getRelative(x, y, z);
-                    for (Material mat : mineables) {
-                        if (block.getType() == mat) {
-                            block.breakNaturally();
-                            addChestItems(mat, 1);
-                            plugin.getLogger().info("NPC " + uuid + " mined " + mat.name().toLowerCase() + ".");
-                            return;
-                        }
+                    if (mineables.contains(block.getType())) {
+                        block.breakNaturally();
+                        addChestItems(block.getType(), 1);
+                        plugin.getLogger().info("NPC " + uuid + " mined " + block.getType().name().toLowerCase() + ".");
+                        return;
                     }
                 }
             }
@@ -153,35 +151,31 @@ public class NPC {
         LivingPlugin plugin = LivingPlugin.getInstance();
         Location loc = villager.getLocation();
         int radius = 5;
+        List<Material> harvestables = plugin.getFarmerHarvestBlocks();
         for (int x = -radius; x <= radius; x++) {
             for (int y = -1; y <= 1; y++) {
                 for (int z = -radius; z <= radius; z++) {
                     Block block = loc.getBlock().getRelative(x, y, z);
-                    if (block.getType() == Material.WHEAT) {
+                    if (harvestables.contains(block.getType())) {
+                        Material crop = block.getType();
                         block.breakNaturally();
-                        block.setType(Material.WHEAT);
-                        addChestItems(Material.WHEAT, 1);
-                        plugin.getLogger().info("NPC " + uuid + " harvested wheat.");
+                        block.setType(crop);
+                        addChestItems(crop, 1);
+                        plugin.getLogger().info("NPC " + uuid + " harvested " + crop.name().toLowerCase() + ".");
                         return;
                     }
                 }
             }
         }
 
-        // Try to plant any available saplings on nearby dirt or grass
-        Material[] saplings = {
-            Material.OAK_SAPLING,
-            Material.BIRCH_SAPLING,
-            Material.SPRUCE_SAPLING,
-            Material.JUNGLE_SAPLING,
-            Material.ACACIA_SAPLING
-        };
+        // Try to plant any available seeds or saplings on nearby dirt or grass
+        List<Material> plantables = plugin.getFarmerPlantBlocks();
         for (int x = -radius; x <= radius; x++) {
             for (int z = -radius; z <= radius; z++) {
                 Block soil = loc.getBlock().getRelative(x, -1, z);
                 Block above = soil.getRelative(0, 1, 0);
                 if ((soil.getType() == Material.GRASS_BLOCK || soil.getType() == Material.DIRT) && above.getType() == Material.AIR) {
-                    for (Material sap : saplings) {
+                    for (Material sap : plantables) {
                         if (getChestItemCount(sap) > 0) {
                             above.setType(sap);
                             removeChestItems(sap, 1);
@@ -321,32 +315,52 @@ public class NPC {
     private void buildSimpleHouse(Location base) {
         if (base == null || base.getWorld() == null) return;
 
-        // floor 5x5
-        for (int x = 0; x < 5; x++) {
-            for (int z = 0; z < 5; z++) {
-                base.clone().add(x, 0, z).getBlock().setType(Material.OAK_PLANKS);
+        LivingPlugin plugin = LivingPlugin.getInstance();
+        FileConfiguration cfg = plugin.getBuilderHouseConfig();
+        ConfigurationSection section = cfg.getConfigurationSection("house");
+        int width = section != null ? section.getInt("width", 5) : 5;
+        int length = section != null ? section.getInt("length", 5) : 5;
+        int height = section != null ? section.getInt("height", 4) : 4;
+        ConfigurationSection mats = section != null ? section.getConfigurationSection("materials") : null;
+        Material floorMat = getMaterial(mats, "floor", Material.OAK_PLANKS);
+        Material wallMat = getMaterial(mats, "wall", Material.OAK_LOG);
+        Material roofMat = getMaterial(mats, "roof", Material.OAK_PLANKS);
+        Material doorMat = getMaterial(mats, "door", Material.OAK_DOOR);
+
+        for (int x = 0; x < width; x++) {
+            for (int z = 0; z < length; z++) {
+                base.clone().add(x, 0, z).getBlock().setType(floorMat);
             }
         }
-        // walls
-        for (int y = 1; y < 4; y++) {
-            for (int x = 0; x < 5; x++) {
-                for (int z = 0; z < 5; z++) {
-                    if (x == 0 || x == 4 || z == 0 || z == 4) {
-                        base.clone().add(x, y, z).getBlock().setType(Material.OAK_LOG);
+
+        for (int y = 1; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                for (int z = 0; z < length; z++) {
+                    if (x == 0 || x == width - 1 || z == 0 || z == length - 1) {
+                        base.clone().add(x, y, z).getBlock().setType(wallMat);
                     }
                 }
             }
         }
-        // doorway (simple)
-        base.clone().add(2, 1, 0).getBlock().setType(Material.AIR);
-        base.clone().add(2, 2, 0).getBlock().setType(Material.AIR);
-        base.clone().add(2, 1, 0).getBlock().setType(Material.OAK_DOOR);
-        // roof
-        for (int x = 0; x < 5; x++) {
-            for (int z = 0; z < 5; z++) {
-                base.clone().add(x, 4, z).getBlock().setType(Material.OAK_PLANKS);
+
+        int doorX = width / 2;
+        base.clone().add(doorX, 1, 0).getBlock().setType(Material.AIR);
+        base.clone().add(doorX, 2, 0).getBlock().setType(Material.AIR);
+        base.clone().add(doorX, 1, 0).getBlock().setType(doorMat);
+
+        for (int x = 0; x < width; x++) {
+            for (int z = 0; z < length; z++) {
+                base.clone().add(x, height, z).getBlock().setType(roofMat);
             }
         }
+    }
+
+    private Material getMaterial(ConfigurationSection section, String key, Material def) {
+        if (section == null) return def;
+        String name = section.getString(key);
+        if (name == null) return def;
+        Material mat = Material.matchMaterial(name);
+        return mat != null ? mat : def;
     }
 
     private int getChestItemCount(Material material) {
