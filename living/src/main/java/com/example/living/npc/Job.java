@@ -7,5 +7,7 @@ public enum Job {
     WOODCUTTER,
     MINER,
     FARMER,
-    BUILDER
+    BUILDER,
+    CRAFTER,
+    COLLECTOR
 }

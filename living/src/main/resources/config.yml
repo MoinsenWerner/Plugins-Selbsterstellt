@@ -9,10 +9,15 @@ city:
     miner: 1              # Miner suchen nach Erzen unter der Stadt.
     farmer: 1             # Farmer kümmern sich um Felder und Lebensmittel.
     builder: 1            # Baumeister errichten neue Gebäude nach Blaupausen.
+    crafter: 1            # Handwerker verarbeiten Ressourcen zu neuen Gegenständen.
+    collector: 1          # Sammler heben herumliegende Items auf und lagern sie ein.
 
 storage:
   chest-radius: 10        # Radius in Blöcken um den Stadtkern, in dem Lagerkisten erkannt und genutzt werden.
 
 npc:
   task-interval: 200      # Ticks zwischen den Ausführungen der Aufgaben eines NPCs.
+
+collector:
+  pickup-radius: 5        # Radius, in dem Sammler nach Items suchen.
 
