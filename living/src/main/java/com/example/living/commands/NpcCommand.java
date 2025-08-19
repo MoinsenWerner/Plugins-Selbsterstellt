@@ -32,8 +32,13 @@ public class NpcCommand implements CommandExecutor, TabCompleter {
             }
             return true;
         }
+        if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
+            plugin.reloadConfig();
+            sender.sendMessage("Config reloaded");
+            return true;
+        }
         if (args.length < 2) {
-            sender.sendMessage("Usage: /" + label + " <uuid> <start|stop|set <key> <value>>");
+            sender.sendMessage("Usage: /" + label + " reload | <uuid> <start|stop|set <key> <value>>");
             return true;
         }
         UUID uuid;
@@ -76,7 +81,9 @@ public class NpcCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> completions = new ArrayList<>();
-        if (args.length == 2) {
+        if (args.length == 1) {
+            completions.add("reload");
+        } else if (args.length == 2) {
             completions.add("start");
             completions.add("stop");
             completions.add("set");
