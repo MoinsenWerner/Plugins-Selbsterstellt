@@ -1,11 +1,16 @@
 package com.example.living;
 
+import java.io.File;
+import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import com.example.living.commands.NpcCommand;
@@ -27,11 +32,14 @@ public class LivingPlugin extends JavaPlugin {
     private String disableReason = "Server shutdown or reload";
     private CityManager cityManager;
     private NPCManager npcManager;
+    private FileConfiguration builderHouseConfig;
 
     @Override
     public void onEnable() {
         instance = this;
         saveDefaultConfig();
+        saveResource("builder_house.yml", false);
+        builderHouseConfig = YamlConfiguration.loadConfiguration(new File(getDataFolder(), "builder_house.yml"));
         this.cityManager = new CityManager(this);
         this.npcManager = new NPCManager(this);
         getServer().getPluginManager().registerEvents(new CityCoreListener(this), this);
@@ -97,5 +105,39 @@ public class LivingPlugin extends JavaPlugin {
             map.put(job, amount);
         }
         return map;
+    }
+
+    public List<Material> getWoodcutterLogs() {
+        return getMaterialList("woodcutter.logs");
+    }
+
+    public List<Material> getMinerBlocks() {
+        return getMaterialList("miner.blocks");
+    }
+
+    public List<Material> getFarmerHarvestBlocks() {
+        return getMaterialList("farmer.harvest");
+    }
+
+    public List<Material> getFarmerPlantBlocks() {
+        return getMaterialList("farmer.plant");
+    }
+
+    public FileConfiguration getBuilderHouseConfig() {
+        return builderHouseConfig;
+    }
+
+    private List<Material> getMaterialList(String path) {
+        List<String> names = getConfig().getStringList(path);
+        List<Material> mats = new ArrayList<>();
+        for (String name : names) {
+            Material mat = Material.matchMaterial(name);
+            if (mat != null) {
+                mats.add(mat);
+            } else {
+                getLogger().warning("Unknown material '" + name + "' in config path " + path);
+            }
+        }
+        return mats;
     }
 }

@@ -1,0 +1,10 @@
+house:
+  width: 5
+  length: 5
+  height: 4
+  materials:
+    floor: OAK_PLANKS
+    wall: OAK_LOG
+    roof: OAK_PLANKS
+    door: OAK_DOOR
+    bed: RED_BED
