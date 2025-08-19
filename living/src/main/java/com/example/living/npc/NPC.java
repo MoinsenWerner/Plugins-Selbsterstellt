@@ -10,6 +10,7 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Villager;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -93,6 +94,7 @@ public class NPC {
             case FARMER -> performFarmerTask(villager);
             case BUILDER -> performBuilderTask(villager);
             case CRAFTER -> performCrafterTask(villager);
+            case COLLECTOR -> performCollectorTask(villager);
             default -> {
                 // no-op for unhandled jobs
             }
@@ -196,6 +198,7 @@ public class NPC {
         LivingPlugin plugin = LivingPlugin.getInstance();
         if (city == null) return;
 
+        // 1) Logs -> Planks (4)
         Material[] logs = {
             Material.OAK_LOG,
             Material.BIRCH_LOG,
@@ -215,6 +218,35 @@ public class NPC {
             }
         }
 
+        // 2) Planks (6) -> Doors (3)
+        Material[] planks = {
+            Material.OAK_PLANKS,
+            Material.BIRCH_PLANKS,
+            Material.SPRUCE_PLANKS,
+            Material.JUNGLE_PLANKS,
+            Material.ACACIA_PLANKS
+        };
+        for (Material plank : planks) {
+            if (getChestItemCount(plank) >= 6) {
+                removeChestItems(plank, 6);
+                Material door = Material.matchMaterial(plank.name().replace("_PLANKS", "_DOOR"));
+                if (door != null) {
+                    addChestItems(door, 3);
+                    plugin.getLogger().info("NPC " + uuid + " crafted doors from " + plank.name().toLowerCase() + ".");
+                }
+                return;
+            }
+        }
+
+        // 3) Sand (6) -> Glass Panes (16)
+        if (getChestItemCount(Material.SAND) >= 6) {
+            removeChestItems(Material.SAND, 6);
+            addChestItems(Material.GLASS_PANE, 16);
+            plugin.getLogger().info("NPC " + uuid + " crafted windows.");
+            return;
+        }
+
+        // 4) Wheat (3) -> Bread (1)
         if (getChestItemCount(Material.WHEAT) >= 3) {
             removeChestItems(Material.WHEAT, 3);
             addChestItems(Material.BREAD, 1);
@@ -222,10 +254,27 @@ public class NPC {
             return;
         }
 
+        // 5) Stone (4) -> Stone Bricks (4)
         if (getChestItemCount(Material.STONE) >= 4) {
             removeChestItems(Material.STONE, 4);
             addChestItems(Material.STONE_BRICKS, 4);
             plugin.getLogger().info("NPC " + uuid + " crafted stone bricks.");
+        }
+    }
+
+    private void performCollectorTask(Villager villager) {
+        LivingPlugin plugin = LivingPlugin.getInstance();
+        if (city == null) return;
+
+        int radius = plugin.getConfig().getInt("collector.pickup-radius", 5);
+        for (Entity e : villager.getNearbyEntities(radius, radius, radius)) {
+            if (e instanceof Item item) {
+                ItemStack stack = item.getItemStack();
+                addChestItems(stack.getType(), stack.getAmount());
+                item.remove();
+                plugin.getLogger().info("NPC " + uuid + " collected " + stack.getAmount() + " " + stack.getType().name().toLowerCase() + ".");
+                return;
+            }
         }
     }
 

@@ -8,5 +8,6 @@ public enum Job {
     MINER,
     FARMER,
     BUILDER,
-    CRAFTER
+    CRAFTER,
+    COLLECTOR
 }
