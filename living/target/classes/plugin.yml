@@ -1,0 +1,10 @@
+name: Living
+version: 0.1.0
+main: com.example.living.LivingPlugin
+description: Dynamic NPC-driven city simulation plugin.
+api-version: "1.21"
+load: POSTWORLD
+commands:
+  l-m:
+    description: Manage Living NPC tasks
+    usage: /l-m [uuid start|stop|set key value]

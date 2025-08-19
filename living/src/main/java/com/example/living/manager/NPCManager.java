@@ -21,6 +21,9 @@ import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitScheduler;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+
 import com.example.living.LivingPlugin;
 import com.example.living.city.City;
 import com.example.living.npc.Job;
@@ -30,15 +33,25 @@ import com.example.living.npc.NPC;
  * Erzeugt und verwaltet NPC-Entitäten für Städte.
  */
 public class NPCManager {
+    private static final Component TITLE_NPC_LIST = Component.text("NPC Verwaltung");
+    private static final String TITLE_SETTINGS_PREFIX = "NPC Settings: ";
+
     private final LivingPlugin plugin;
     private final Map<UUID, NPC> npcs = new HashMap<>();
     private final File dataFile;
     private final FileConfiguration dataConfig;
 
+    /** Map, um den GUI-Titel pro Inventory zuzuordnen (ersetzt getTitle()). */
+    private final Map<Inventory, Component> guiTitles = new HashMap<>();
+
+    /** Einheitlicher PDC-Key für Item-Metadaten. */
+    private final NamespacedKey npcUuidKey;
+
     public NPCManager(LivingPlugin plugin) {
         this.plugin = plugin;
         this.dataFile = new File(plugin.getDataFolder(), "npc-settings.yml");
         this.dataConfig = YamlConfiguration.loadConfiguration(dataFile);
+        this.npcUuidKey = new NamespacedKey(plugin, "npc-uuid");
     }
 
     public void spawnInitialNpcs(City city) {
@@ -56,15 +69,25 @@ public class NPCManager {
             return null;
         }
         Location loc = city.getCoreLocation();
+        if (loc == null || loc.getWorld() == null) {
+            plugin.getLogger().warning("Cannot spawn NPC: city core location/world is null for " + city.getName());
+            return null;
+        }
+
         Villager villager = loc.getWorld().spawn(loc, Villager.class);
-        villager.setCustomName(job.name());
+        // Sichtbarer Name (Adventure, falls deine API dies unterstützt)
+        villager.customName(Component.text(job.name()));
         villager.setCustomNameVisible(true);
+
         NPC npc = new NPC(villager.getUniqueId(), job);
         city.addNpc(npc);
         npcs.put(npc.getUuid(), npc);
+
         loadNpcSettings(npc);
+
         BukkitScheduler scheduler = plugin.getServer().getScheduler();
-        scheduler.runTaskTimer(plugin, npc::performTask, plugin.getNpcTaskInterval(), plugin.getNpcTaskInterval());
+        long interval = Math.max(1L, plugin.getNpcTaskInterval());
+        scheduler.runTaskTimer(plugin, npc::performTask, interval, interval);
         return npc;
     }
 
@@ -73,77 +96,130 @@ public class NPCManager {
     }
 
     public void openNpcListGui(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 54, "NPC Manager");
-        NamespacedKey key = new NamespacedKey(plugin, "npc-uuid");
+        Inventory inv = Bukkit.createInventory(null, 54, TITLE_NPC_LIST);
+        guiTitles.put(inv, TITLE_NPC_LIST);
+
         int slot = 0;
         for (NPC npc : npcs.values()) {
             ItemStack item = new ItemStack(Material.VILLAGER_SPAWN_EGG);
             ItemMeta meta = item.getItemMeta();
-            meta.setDisplayName(npc.getJob() + " - " + npc.getUuid());
-            meta.getPersistentDataContainer().set(key, PersistentDataType.STRING, npc.getUuid().toString());
-            item.setItemMeta(meta);
-            inv.setItem(slot++, item);
+            if (meta != null) {
+                meta.displayName(Component.text(npc.getJob() + " - " + npc.getUuid()));
+                meta.getPersistentDataContainer().set(npcUuidKey, PersistentDataType.STRING, npc.getUuid().toString());
+                item.setItemMeta(meta);
+            }
+            if (slot < inv.getSize()) {
+                inv.setItem(slot++, item);
+            } else {
+                break; // GUI voll
+            }
         }
         player.openInventory(inv);
     }
 
     public void openNpcSettingsGui(Player player, NPC npc) {
-        Inventory inv = Bukkit.createInventory(null, 9, "NPC Settings: " + npc.getUuid());
+        Component title = Component.text(TITLE_SETTINGS_PREFIX + npc.getUuid());
+        Inventory inv = Bukkit.createInventory(null, 9, title);
+        guiTitles.put(inv, title);
+
+        // Start/Stop Toggle
         ItemStack toggle = new ItemStack(npc.isActive() ? Material.LIME_WOOL : Material.RED_WOOL);
         ItemMeta meta = toggle.getItemMeta();
-        meta.setDisplayName(npc.isActive() ? "Stop" : "Start");
-        NamespacedKey key = new NamespacedKey(plugin, "npc-uuid");
-        meta.getPersistentDataContainer().set(key, PersistentDataType.STRING, npc.getUuid().toString());
-        toggle.setItemMeta(meta);
+        if (meta != null) {
+            meta.displayName(Component.text(npc.isActive() ? "Stop" : "Start"));
+            meta.getPersistentDataContainer().set(npcUuidKey, PersistentDataType.STRING, npc.getUuid().toString());
+            toggle.setItemMeta(meta);
+        }
         inv.setItem(0, toggle);
 
+        // Job-spezifische Optionen
         if (npc.getJob() == Job.WOODCUTTER) {
             ItemStack tree = new ItemStack(Material.OAK_SAPLING);
             ItemMeta treeMeta = tree.getItemMeta();
-            String type = npc.getTaskParameters().getOrDefault("tree", "OAK");
-            treeMeta.setDisplayName("Tree: " + type);
-            treeMeta.getPersistentDataContainer().set(key, PersistentDataType.STRING, npc.getUuid().toString());
-            tree.setItemMeta(treeMeta);
+            if (treeMeta != null) {
+                String type = npc.getTaskParameters().getOrDefault("tree", "OAK");
+                treeMeta.displayName(Component.text("Tree: " + type));
+                treeMeta.getPersistentDataContainer().set(npcUuidKey, PersistentDataType.STRING, npc.getUuid().toString());
+                tree.setItemMeta(treeMeta);
+            }
             inv.setItem(1, tree);
         }
         player.openInventory(inv);
     }
 
+    /**
+     * Bevorzugte Variante: Listener reicht den echten View-Titel (Component) mit.
+     */
+    public void handleInventoryClick(Player player, Component viewTitle, Inventory inv, ItemStack item) {
+        if (player == null || inv == null || item == null) return;
+
+        Component effectiveTitle = (viewTitle != null) ? viewTitle : guiTitles.get(inv);
+        if (effectiveTitle == null) {
+            // Fallback: unbekanntes Inventar – nichts zu tun
+            return;
+        }
+
+        String plainTitle = PlainTextComponentSerializer.plainText().serialize(effectiveTitle);
+
+        if (TITLE_NPC_LIST.equals(effectiveTitle) || "NPC Verwaltung".equals(plainTitle)) {
+            handleNpcListClick(player, item);
+            return;
+        }
+
+        if (plainTitle.startsWith(TITLE_SETTINGS_PREFIX)) {
+            handleNpcSettingsClick(player, item);
+        }
+    }
+
+    /**
+     * Abwärtskompatibel: Falls der Listener den View-Titel nicht liefert.
+     * Versucht, den Titel aus der internen Map zu bestimmen.
+     */
+    @Deprecated
     public void handleInventoryClick(Player player, Inventory inv, ItemStack item) {
-        if (inv.getTitle().equals("NPC Manager")) {
-            NamespacedKey key = new NamespacedKey(plugin, "npc-uuid");
-            ItemMeta meta = item.getItemMeta();
-            if (meta == null) return;
-            PersistentDataContainer container = meta.getPersistentDataContainer();
-            String uuidStr = container.get(key, PersistentDataType.STRING);
-            if (uuidStr == null) return;
-            NPC npc = getNpc(UUID.fromString(uuidStr));
-            if (npc != null) {
-                openNpcSettingsGui(player, npc);
-            }
-        } else if (inv.getTitle().startsWith("NPC Settings")) {
-            NamespacedKey key = new NamespacedKey(plugin, "npc-uuid");
-            ItemMeta meta = item.getItemMeta();
-            if (meta == null) return;
-            String uuidStr = meta.getPersistentDataContainer().get(key, PersistentDataType.STRING);
-            if (uuidStr == null) return;
-            NPC npc = getNpc(UUID.fromString(uuidStr));
-            if (npc == null) return;
-            if (item.getType() == Material.LIME_WOOL || item.getType() == Material.RED_WOOL) {
-                npc.setActive(!npc.isActive());
-                saveNpcSettings(npc);
-                openNpcSettingsGui(player, npc);
-            } else if (item.getType() == Material.OAK_SAPLING) {
-                String current = npc.getTaskParameters().getOrDefault("tree", "OAK");
-                String next = switch (current) {
-                    case "OAK" -> "BIRCH";
-                    case "BIRCH" -> "SPRUCE";
-                    default -> "OAK";
-                };
-                npc.setTaskParameter("tree", next);
-                saveNpcSettings(npc);
-                openNpcSettingsGui(player, npc);
-            }
+        Component mapped = guiTitles.get(inv);
+        handleInventoryClick(player, mapped, inv, item);
+    }
+
+    private void handleNpcListClick(Player player, ItemStack item) {
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) return;
+
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+        String uuidStr = container.get(npcUuidKey, PersistentDataType.STRING);
+        if (uuidStr == null) return;
+
+        NPC npc = getNpc(safeUuid(uuidStr));
+        if (npc != null) {
+            openNpcSettingsGui(player, npc);
+        }
+    }
+
+    private void handleNpcSettingsClick(Player player, ItemStack item) {
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) return;
+
+        String uuidStr = meta.getPersistentDataContainer().get(npcUuidKey, PersistentDataType.STRING);
+        if (uuidStr == null) return;
+
+        NPC npc = getNpc(safeUuid(uuidStr));
+        if (npc == null) return;
+
+        Material type = item.getType();
+        if (type == Material.LIME_WOOL || type == Material.RED_WOOL) {
+            npc.setActive(!npc.isActive());
+            saveNpcSettings(npc);
+            openNpcSettingsGui(player, npc);
+        } else if (type == Material.OAK_SAPLING) {
+            String current = npc.getTaskParameters().getOrDefault("tree", "OAK");
+            String next = switch (current) {
+                case "OAK" -> "BIRCH";
+                case "BIRCH" -> "SPRUCE";
+                default -> "OAK";
+            };
+            npc.setTaskParameter("tree", next);
+            saveNpcSettings(npc);
+            openNpcSettingsGui(player, npc);
         }
     }
 
@@ -165,9 +241,17 @@ public class NPCManager {
             npc.setActive(dataConfig.getBoolean(base + ".active", true));
             if (dataConfig.isConfigurationSection(base + ".params")) {
                 for (Map.Entry<String, Object> entry : dataConfig.getConfigurationSection(base + ".params").getValues(false).entrySet()) {
-                    npc.setTaskParameter(entry.getKey(), entry.getValue().toString());
+                    npc.setTaskParameter(entry.getKey(), String.valueOf(entry.getValue()));
                 }
             }
+        }
+    }
+
+    private static UUID safeUuid(String s) {
+        try {
+            return UUID.fromString(s);
+        } catch (IllegalArgumentException ex) {
+            return null;
         }
     }
 }
