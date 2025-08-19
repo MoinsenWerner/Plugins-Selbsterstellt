@@ -54,4 +54,3 @@ public class NPCManager {
         return npcs.get(uuid);
     }
 }
-
