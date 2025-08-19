@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -18,9 +19,8 @@ import com.example.living.city.City;
 
 /**
  * Basic representation of an NPC controlled by the plugin.
- * The implementation here is intentionally lightweight and is
- * meant to be expanded with behavior logic, pathfinding and
- * interaction with the Minecraft world.
+ * Lightweight and intended to be expanded with behavior logic,
+ * pathfinding, and world interaction.
  */
 public class NPC {
 
@@ -54,7 +54,12 @@ public class NPC {
     }
 
     public void setTaskParameter(String key, String value) {
-        taskParameters.put(key, value);
+        if (key == null) return;
+        if (value == null) {
+            taskParameters.remove(key);
+        } else {
+            taskParameters.put(key, value);
+        }
     }
 
     public Map<String, String> getTaskParameters() {
@@ -70,20 +75,26 @@ public class NPC {
     }
 
     /**
-     * Simple AI execution for the NPC based on its job. The
-     * implementation is intentionally lightweight and serves as
-     * a placeholder for more advanced behavior.
+     * Simple AI execution for the NPC based on its job.
+     * Placeholder for more advanced behavior.
      */
     public void performTask() {
-        if (!active) {
+        if (!active) return;
+
+        Villager villager = resolveVillager();
+        if (villager == null) {
+            // Entity not found -> skip this tick
             return;
         }
-@@ -75,110 +88,212 @@ public class NPC {
+
         switch (job) {
             case WOODCUTTER -> performWoodcutterTask(villager);
             case MINER -> performMinerTask(villager);
             case FARMER -> performFarmerTask(villager);
             case BUILDER -> performBuilderTask(villager);
+            default -> {
+                // no-op for unhandled jobs
+            }
         }
     }
 
@@ -167,16 +178,20 @@ public class NPC {
             plugin.getLogger().warning("Builder NPC has no city assigned.");
             return;
         }
+
         int logsRequired = 100;
         int stoneRequired = 20;
         int wheatRequired = 10;
+
         int logsAvailable = city.getResource(Material.OAK_LOG) + getChestItemCount(Material.OAK_LOG);
         int stoneAvailable = city.getResource(Material.STONE) + getChestItemCount(Material.STONE);
         int wheatAvailable = city.getResource(Material.WHEAT) + getChestItemCount(Material.WHEAT);
+
         if (logsAvailable < logsRequired || stoneAvailable < stoneRequired || wheatAvailable < wheatRequired) {
             plugin.getLogger().info("NPC " + uuid + " lacks resources to build.");
             return;
         }
+
         int logsFromCity = Math.min(logsRequired, city.getResource(Material.OAK_LOG));
         city.consumeResource(Material.OAK_LOG, logsFromCity);
         removeChestItems(Material.OAK_LOG, logsRequired - logsFromCity);
@@ -195,7 +210,9 @@ public class NPC {
     }
 
     private void buildSimpleHouse(Location base) {
-        // Build a small 5x5 villager-style house
+        if (base == null || base.getWorld() == null) return;
+
+        // floor 5x5
         for (int x = 0; x < 5; x++) {
             for (int z = 0; z < 5; z++) {
                 base.clone().add(x, 0, z).getBlock().setType(Material.OAK_PLANKS);
@@ -211,11 +228,10 @@ public class NPC {
                 }
             }
         }
-        // doorway
+        // doorway (simple)
         base.clone().add(2, 1, 0).getBlock().setType(Material.AIR);
         base.clone().add(2, 2, 0).getBlock().setType(Material.AIR);
         base.clone().add(2, 1, 0).getBlock().setType(Material.OAK_DOOR);
-        base.clone().add(2, 2, 0).getBlock().setType(Material.OAK_DOOR);
         // roof
         for (int x = 0; x < 5; x++) {
             for (int z = 0; z < 5; z++) {
@@ -226,13 +242,11 @@ public class NPC {
 
     private int getChestItemCount(Material material) {
         LivingPlugin plugin = LivingPlugin.getInstance();
-        if (city == null) {
-            return 0;
-        }
+        if (city == null) return 0;
+
         Location core = city.getCoreLocation();
-        if (core == null || core.getWorld() == null) {
-            return 0;
-        }
+        if (core == null || core.getWorld() == null) return 0;
+
         int radius = plugin.getConfig().getInt("storage.chest-radius", 10);
         int count = 0;
         for (int x = -radius; x <= radius; x++) {
@@ -255,14 +269,12 @@ public class NPC {
     }
 
     private void removeChestItems(Material material, int amount) {
-        if (amount <= 0 || city == null) {
-            return;
-        }
+        if (amount <= 0 || city == null) return;
+
         LivingPlugin plugin = LivingPlugin.getInstance();
         Location core = city.getCoreLocation();
-        if (core == null || core.getWorld() == null) {
-            return;
-        }
+        if (core == null || core.getWorld() == null) return;
+
         int radius = plugin.getConfig().getInt("storage.chest-radius", 10);
         for (int x = -radius; x <= radius && amount > 0; x++) {
             for (int y = -radius; y <= radius && amount > 0; y++) {
@@ -275,10 +287,11 @@ public class NPC {
                             ItemStack stack = inv.getItem(i);
                             if (stack != null && stack.getType() == material) {
                                 int take = Math.min(amount, stack.getAmount());
-                                stack.setAmount(stack.getAmount() - take);
-                                if (stack.getAmount() <= 0) {
+                                int newAmount = stack.getAmount() - take;
+                                if (newAmount <= 0) {
                                     inv.setItem(i, null);
                                 } else {
+                                    stack.setAmount(newAmount);
                                     inv.setItem(i, stack);
                                 }
                                 amount -= take;
@@ -289,5 +302,12 @@ public class NPC {
                 }
             }
         }
+    }
+
+    /** Resolve the Villager entity by UUID or return null if missing. */
+    private Villager resolveVillager() {
+        Entity e = Bukkit.getEntity(uuid);
+        if (e instanceof Villager v) return v;
+        return null;
     }
 }
