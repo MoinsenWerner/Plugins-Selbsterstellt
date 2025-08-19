@@ -198,6 +198,7 @@ public class NPC {
         LivingPlugin plugin = LivingPlugin.getInstance();
         if (city == null) return;
 
+        // 1) Logs -> Planks (4)
         Material[] logs = {
             Material.OAK_LOG,
             Material.BIRCH_LOG,
@@ -217,6 +218,7 @@ public class NPC {
             }
         }
 
+        // 2) Planks (6) -> Doors (3)
         Material[] planks = {
             Material.OAK_PLANKS,
             Material.BIRCH_PLANKS,
@@ -236,6 +238,7 @@ public class NPC {
             }
         }
 
+        // 3) Sand (6) -> Glass Panes (16)
         if (getChestItemCount(Material.SAND) >= 6) {
             removeChestItems(Material.SAND, 6);
             addChestItems(Material.GLASS_PANE, 16);
@@ -243,6 +246,7 @@ public class NPC {
             return;
         }
 
+        // 4) Wheat (3) -> Bread (1)
         if (getChestItemCount(Material.WHEAT) >= 3) {
             removeChestItems(Material.WHEAT, 3);
             addChestItems(Material.BREAD, 1);
@@ -250,6 +254,7 @@ public class NPC {
             return;
         }
 
+        // 5) Stone (4) -> Stone Bricks (4)
         if (getChestItemCount(Material.STONE) >= 4) {
             removeChestItems(Material.STONE, 4);
             addChestItems(Material.STONE_BRICKS, 4);

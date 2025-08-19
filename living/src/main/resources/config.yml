@@ -20,4 +20,3 @@ npc:
 
 collector:
   pickup-radius: 5        # Radius, in dem Sammler nach Items suchen.
-
