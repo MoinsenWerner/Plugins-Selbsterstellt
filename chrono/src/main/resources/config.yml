@@ -1,0 +1,6 @@
+# Configure which snapshots (world names) allow building and breaking.
+# Add snapshot identifiers or world names to the respective lists.
+buildSnapshots:
+  - world
+breakSnapshots:
+  - world
