@@ -1,3 +1,18 @@
-# Default configuration for Living plugin
+# Konfiguration für das Living-Plugin
+
 city:
-  maxNPCs: 50
+  core-material: LODESTONE # Block, der als Stadtkern dient. Wird dieser Block platziert, entsteht eine neue Stadt.
+  max-npcs: 50            # Maximale Anzahl an NPCs, die eine Stadt gleichzeitig haben darf.
+  spawn-interval: 600     # Ticks zwischen Versuchen, neue NPCs zu erschaffen (20 Ticks = 1 Sekunde).
+  initial-jobs:           # Anzahl der NPCs je Beruf, die beim Erstellen einer Stadt gespawnt werden.
+    woodcutter: 1         # Holzfäller sammeln Holz in der Umgebung.
+    miner: 1              # Miner suchen nach Erzen unter der Stadt.
+    farmer: 1             # Farmer kümmern sich um Felder und Lebensmittel.
+    builder: 1            # Baumeister errichten neue Gebäude nach Blaupausen.
+
+storage:
+  chest-radius: 10        # Radius in Blöcken um den Stadtkern, in dem Lagerkisten erkannt und genutzt werden.
+
+npc:
+  task-interval: 200      # Ticks zwischen den Ausführungen der Aufgaben eines NPCs.
+
