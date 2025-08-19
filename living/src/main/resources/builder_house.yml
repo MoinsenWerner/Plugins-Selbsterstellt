@@ -7,3 +7,4 @@ house:
     wall: OAK_LOG
     roof: OAK_PLANKS
     door: OAK_DOOR
+    bed: RED_BED

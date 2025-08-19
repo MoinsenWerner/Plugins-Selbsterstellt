@@ -11,6 +11,7 @@ city:
     builder: 1            # Baumeister errichten neue Gebäude nach Blaupausen.
     crafter: 1            # Handwerker verarbeiten Ressourcen zu neuen Gegenständen.
     collector: 1          # Sammler heben herumliegende Items auf und lagern sie ein.
+    hunter: 1             # Jäger versorgen die Stadt mit Fleisch, Leder und Wolle.
 
 storage:
   chest-radius: 10        # Radius in Blöcken um den Stadtkern, in dem Lagerkisten erkannt und genutzt werden.
@@ -30,8 +31,7 @@ miner:
   blocks:                # Liste der Blöcke, die Miner abbauen können
     - STONE
     - SAND
-    - GRASS_BLOCK
-    - DIRT
+    - COBBLESTONE
 
 farmer:
   harvest:               # Erntebare Pflanzen für Farmer

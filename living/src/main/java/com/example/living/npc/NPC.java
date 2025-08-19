@@ -13,6 +13,10 @@ import org.bukkit.block.Chest;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Villager;
+import org.bukkit.entity.Cow;
+import org.bukkit.entity.Pig;
+import org.bukkit.entity.Sheep;
+import org.bukkit.entity.EntityType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.configuration.ConfigurationSection;
@@ -97,6 +101,7 @@ public class NPC {
             case FARMER -> performFarmerTask(villager);
             case BUILDER -> performBuilderTask(villager);
             case CRAFTER -> performCrafterTask(villager);
+            case HUNTER -> performHunterTask(villager);
             case COLLECTOR -> performCollectorTask(villager);
             default -> {
                 // no-op for unhandled jobs
@@ -131,6 +136,8 @@ public class NPC {
         Location loc = villager.getLocation();
         int radius = 5;
         List<Material> mineables = plugin.getMinerBlocks();
+        mineables.remove(Material.DIRT);
+        mineables.remove(Material.GRASS_BLOCK);
         if (mineables.isEmpty()) return;
         for (int x = -radius; x <= radius; x++) {
             for (int y = -radius; y <= radius; y++) {
@@ -182,6 +189,35 @@ public class NPC {
                             plugin.getLogger().info("NPC " + uuid + " planted " + sap.name().toLowerCase() + ".");
                             return;
                         }
+                    }
+                }
+            }
+        }
+
+        // Create farmland from dirt or grass
+        for (int x = -radius; x <= radius; x++) {
+            for (int z = -radius; z <= radius; z++) {
+                Block soil = loc.getBlock().getRelative(x, -1, z);
+                if (soil.getType() == Material.DIRT || soil.getType() == Material.GRASS_BLOCK) {
+                    soil.setType(Material.FARMLAND);
+                    plugin.getLogger().info("NPC " + uuid + " tilled soil into farmland.");
+                    return;
+                }
+            }
+        }
+
+        // Place water if available
+        if (getChestItemCount(Material.WATER_BUCKET) > 0) {
+            for (int x = -radius; x <= radius; x++) {
+                for (int z = -radius; z <= radius; z++) {
+                    Block ground = loc.getBlock().getRelative(x, -1, z);
+                    Block above = ground.getRelative(0, 1, 0);
+                    if (above.getType() == Material.AIR) {
+                        above.setType(Material.WATER);
+                        removeChestItems(Material.WATER_BUCKET, 1);
+                        addChestItems(Material.BUCKET, 1);
+                        plugin.getLogger().info("NPC " + uuid + " placed water.");
+                        return;
                     }
                 }
             }
@@ -256,10 +292,81 @@ public class NPC {
         }
     }
 
+    private void performHunterTask(Villager villager) {
+        LivingPlugin plugin = LivingPlugin.getInstance();
+        Location loc = villager.getLocation();
+        int radius = 5;
+
+        // Shear sheep if available
+        for (Entity e : villager.getNearbyEntities(radius, radius, radius)) {
+            if (e instanceof Sheep sheep && !sheep.isSheared()) {
+                sheep.setSheared(true);
+                Material woolMat = Material.matchMaterial(sheep.getColor().name() + "_WOOL");
+                if (woolMat != null) {
+                    addChestItems(woolMat, 1);
+                }
+                plugin.getLogger().info("NPC " + uuid + " sheared a sheep.");
+                return;
+            }
+        }
+
+        // Breed cows if possible
+        if (getChestItemCount(Material.WHEAT) > 0) {
+            int cowCount = 0;
+            Location cowLoc = null;
+            for (Entity e : villager.getNearbyEntities(radius, radius, radius)) {
+                if (e instanceof Cow cow) {
+                    cowCount++;
+                    if (cowLoc == null) cowLoc = cow.getLocation();
+                }
+            }
+            if (cowCount >= 2 && cowLoc != null) {
+                Cow calf = (Cow) loc.getWorld().spawnEntity(cowLoc, EntityType.COW);
+                calf.setBaby();
+                removeChestItems(Material.WHEAT, 1);
+                plugin.getLogger().info("NPC " + uuid + " bred cows.");
+                return;
+            }
+        }
+
+        // Breed pigs if possible
+        if (getChestItemCount(Material.CARROT) > 0) {
+            int pigCount = 0;
+            Location pigLoc = null;
+            for (Entity e : villager.getNearbyEntities(radius, radius, radius)) {
+                if (e instanceof Pig pig) {
+                    pigCount++;
+                    if (pigLoc == null) pigLoc = pig.getLocation();
+                }
+            }
+            if (pigCount >= 2 && pigLoc != null) {
+                Pig piglet = (Pig) loc.getWorld().spawnEntity(pigLoc, EntityType.PIG);
+                piglet.setBaby();
+                removeChestItems(Material.CARROT, 1);
+                plugin.getLogger().info("NPC " + uuid + " bred pigs.");
+                return;
+            }
+        }
+
+        // Hunt cows or pigs
+        for (Entity e : villager.getNearbyEntities(radius, radius, radius)) {
+            if (e instanceof Cow) {
+                e.remove();
+                addChestItems(Material.BEEF, 1);
+                addChestItems(Material.LEATHER, 1);
+                plugin.getLogger().info("NPC " + uuid + " hunted a cow.");
+                return;
+            } else if (e instanceof Pig) {
+                e.remove();
+                addChestItems(Material.PORKCHOP, 1);
+                plugin.getLogger().info("NPC " + uuid + " hunted a pig.");
+                return;
+            }
+        }
+    }
+
     private void performCollectorTask(Villager villager) {
         LivingPlugin plugin = LivingPlugin.getInstance();
-        if (city == null) return;
-
         int radius = plugin.getConfig().getInt("collector.pickup-radius", 5);
         for (Entity e : villager.getNearbyEntities(radius, radius, radius)) {
             if (e instanceof Item item) {
@@ -268,6 +375,25 @@ public class NPC {
                 item.remove();
                 plugin.getLogger().info("NPC " + uuid + " collected " + stack.getAmount() + " " + stack.getType().name().toLowerCase() + ".");
                 return;
+            }
+        }
+
+        // Collect water with buckets
+        if (getChestItemCount(Material.BUCKET) > 0) {
+            Location loc = villager.getLocation();
+            for (int x = -1; x <= 1; x++) {
+                for (int y = -1; y <= 1; y++) {
+                    for (int z = -1; z <= 1; z++) {
+                        Block block = loc.getBlock().getRelative(x, y, z);
+                        if (block.getType() == Material.WATER) {
+                            block.setType(Material.AIR);
+                            removeChestItems(Material.BUCKET, 1);
+                            addChestItems(Material.WATER_BUCKET, 1);
+                            plugin.getLogger().info("NPC " + uuid + " collected water.");
+                            return;
+                        }
+                    }
+                }
             }
         }
     }
@@ -326,6 +452,7 @@ public class NPC {
         Material wallMat = getMaterial(mats, "wall", Material.OAK_LOG);
         Material roofMat = getMaterial(mats, "roof", Material.OAK_PLANKS);
         Material doorMat = getMaterial(mats, "door", Material.OAK_DOOR);
+        Material bedMat = getMaterial(mats, "bed", Material.RED_BED);
 
         for (int x = 0; x < width; x++) {
             for (int z = 0; z < length; z++) {
@@ -348,6 +475,7 @@ public class NPC {
         base.clone().add(doorX, 2, 0).getBlock().setType(Material.AIR);
         base.clone().add(doorX, 1, 0).getBlock().setType(doorMat);
 
+        base.clone().add(1, 1, 1).getBlock().setType(bedMat);
         for (int x = 0; x < width; x++) {
             for (int z = 0; z < length; z++) {
                 base.clone().add(x, height, z).getBlock().setType(roofMat);
@@ -365,17 +493,21 @@ public class NPC {
 
     private int getChestItemCount(Material material) {
         LivingPlugin plugin = LivingPlugin.getInstance();
-        if (city == null) return 0;
-
-        Location core = city.getCoreLocation();
-        if (core == null || core.getWorld() == null) return 0;
+        Location center = city != null ? city.getCoreLocation() : null;
+        if (center == null || center.getWorld() == null) {
+            Villager v = resolveVillager();
+            if (v != null) {
+                center = v.getLocation();
+            }
+        }
+        if (center == null || center.getWorld() == null) return 0;
 
         int radius = plugin.getConfig().getInt("storage.chest-radius", 10);
         int count = 0;
         for (int x = -radius; x <= radius; x++) {
             for (int y = -radius; y <= radius; y++) {
                 for (int z = -radius; z <= radius; z++) {
-                    Block block = core.getBlock().getRelative(x, y, z);
+                    Block block = center.getBlock().getRelative(x, y, z);
                     if (block.getType() == Material.CHEST) {
                         Chest chest = (Chest) block.getState();
                         Inventory inv = chest.getBlockInventory();
@@ -392,17 +524,23 @@ public class NPC {
     }
 
     private void removeChestItems(Material material, int amount) {
-        if (amount <= 0 || city == null) return;
+        if (amount <= 0) return;
 
         LivingPlugin plugin = LivingPlugin.getInstance();
-        Location core = city.getCoreLocation();
-        if (core == null || core.getWorld() == null) return;
+        Location center = city != null ? city.getCoreLocation() : null;
+        if (center == null || center.getWorld() == null) {
+            Villager v = resolveVillager();
+            if (v != null) {
+                center = v.getLocation();
+            }
+        }
+        if (center == null || center.getWorld() == null) return;
 
         int radius = plugin.getConfig().getInt("storage.chest-radius", 10);
         for (int x = -radius; x <= radius && amount > 0; x++) {
             for (int y = -radius; y <= radius && amount > 0; y++) {
                 for (int z = -radius; z <= radius && amount > 0; z++) {
-                    Block block = core.getBlock().getRelative(x, y, z);
+                    Block block = center.getBlock().getRelative(x, y, z);
                     if (block.getType() == Material.CHEST) {
                         Chest chest = (Chest) block.getState();
                         Inventory inv = chest.getBlockInventory();
@@ -427,18 +565,24 @@ public class NPC {
     }
 
     private void addChestItems(Material material, int amount) {
-        if (amount <= 0 || city == null) return;
+        if (amount <= 0) return;
 
         LivingPlugin plugin = LivingPlugin.getInstance();
-        Location core = city.getCoreLocation();
-        if (core == null || core.getWorld() == null) return;
+        Location center = city != null ? city.getCoreLocation() : null;
+        if (center == null || center.getWorld() == null) {
+            Villager v = resolveVillager();
+            if (v != null) {
+                center = v.getLocation();
+            }
+        }
+        if (center == null || center.getWorld() == null) return;
 
         int radius = plugin.getConfig().getInt("storage.chest-radius", 10);
         int remaining = amount;
         for (int x = -radius; x <= radius && remaining > 0; x++) {
             for (int y = -radius; y <= radius && remaining > 0; y++) {
                 for (int z = -radius; z <= radius && remaining > 0; z++) {
-                    Block block = core.getBlock().getRelative(x, y, z);
+                    Block block = center.getBlock().getRelative(x, y, z);
                     if (block.getType() == Material.CHEST) {
                         Chest chest = (Chest) block.getState();
                         Inventory inv = chest.getBlockInventory();
