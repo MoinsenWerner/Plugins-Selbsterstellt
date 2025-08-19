@@ -1,0 +1,3 @@
+# Default configuration for Living plugin
+city:
+  maxNPCs: 50

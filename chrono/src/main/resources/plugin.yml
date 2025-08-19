@@ -1,0 +1,5 @@
+name: Chrono
+main: com.example.chrono.ChronoPlugin
+version: 1.0
+api-version: 1.21.5
+description: Controls block interactions per snapshot.
