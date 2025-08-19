@@ -1,0 +1,9 @@
+name: Nations
+version: 0.1.0
+main: com.example.nations.NationsPlugin
+api-version: '1.21'
+commands:
+  nation:
+    description: Manage nations
+    usage: /<command> <create|claim|relation|war>
+    permission: nations.command
