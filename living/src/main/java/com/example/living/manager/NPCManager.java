@@ -192,6 +192,7 @@ public class NPCManager {
         NPC npc = getNpc(safeUuid(uuidStr));
         if (npc != null) {
             openNpcSettingsGui(player, npc);
+            player.sendMessage("Settings: active=" + npc.isActive() + ", params=" + npc.getTaskParameters());
         }
     }
 
