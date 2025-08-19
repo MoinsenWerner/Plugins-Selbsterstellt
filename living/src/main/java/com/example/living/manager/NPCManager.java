@@ -1,6 +1,8 @@
 package com.example.living.manager;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import org.bukkit.Location;
 import org.bukkit.entity.Villager;
@@ -16,6 +18,7 @@ import com.example.living.npc.NPC;
  */
 public class NPCManager {
     private final LivingPlugin plugin;
+    private final Map<UUID, NPC> npcs = new HashMap<>();
 
     public NPCManager(LivingPlugin plugin) {
         this.plugin = plugin;
@@ -41,9 +44,13 @@ public class NPCManager {
         villager.setCustomNameVisible(true);
         NPC npc = new NPC(villager.getUniqueId(), job);
         city.addNpc(npc);
+        npcs.put(npc.getUuid(), npc);
         BukkitScheduler scheduler = plugin.getServer().getScheduler();
         scheduler.runTaskTimer(plugin, npc::performTask, plugin.getNpcTaskInterval(), plugin.getNpcTaskInterval());
         return npc;
     }
-}
 
+    public NPC getNpc(UUID uuid) {
+        return npcs.get(uuid);
+    }
+}

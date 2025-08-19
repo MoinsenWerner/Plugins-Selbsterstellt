@@ -8,6 +8,7 @@ import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import com.example.living.commands.NpcCommand;
 import com.example.living.npc.Job;
 import com.example.living.manager.CityManager;
 import com.example.living.manager.NPCManager;
@@ -33,6 +34,9 @@ public class LivingPlugin extends JavaPlugin {
         this.cityManager = new CityManager(this);
         this.npcManager = new NPCManager(this);
         getServer().getPluginManager().registerEvents(new CityCoreListener(this), this);
+        NpcCommand npcCommand = new NpcCommand(this);
+        getCommand("l-m").setExecutor(npcCommand);
+        getCommand("l-m").setTabCompleter(npcCommand);
         getLogger().info("Living plugin enabled. Placeholder simulation initialized.");
     }
 
