@@ -1,11 +1,15 @@
 # Ignore Maven build output
 living/target/
 chrono/target/
+nations/target/
+
 # Ignore IDE files
 *.iml
 .idea/
 .classpath
 .project
 .settings/
+
 # Ignore OS files
 .DS_Store
+
