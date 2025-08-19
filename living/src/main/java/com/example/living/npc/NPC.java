@@ -11,6 +11,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Villager;
 
 import com.example.living.LivingPlugin;
+import com.example.living.city.City;
 
 /**
  * Basic representation of an NPC controlled by the plugin.
@@ -24,6 +25,7 @@ public class NPC {
     private final Job job;
     private final Map<String, String> taskParameters = new HashMap<>();
     private boolean active = true;
+    private City city;
 
     public NPC(UUID uuid, Job job) {
         this.uuid = uuid;
@@ -38,6 +40,14 @@ public class NPC {
 
     public Job getJob() {
         return job;
+    }
+
+    public void setCity(City city) {
+        this.city = city;
+    }
+
+    public City getCity() {
+        return city;
     }
 
     public void setTaskParameter(String key, String value) {
@@ -97,6 +107,9 @@ public class NPC {
                     Block block = loc.getBlock().getRelative(x, y, z);
                     if (block.getType() == logMaterial) {
                         block.breakNaturally();
+                        if (city != null) {
+                            city.addResource(logMaterial, 1);
+                        }
                         plugin.getLogger().info("NPC " + uuid + " cut a " + tree + " log.");
                         return;
                     }
@@ -115,6 +128,9 @@ public class NPC {
                     Block block = loc.getBlock().getRelative(x, y, z);
                     if (block.getType() == Material.STONE) {
                         block.breakNaturally();
+                        if (city != null) {
+                            city.addResource(Material.STONE, 1);
+                        }
                         plugin.getLogger().info("NPC " + uuid + " mined stone.");
                         return;
                     }
@@ -134,6 +150,9 @@ public class NPC {
                     if (block.getType() == Material.WHEAT) {
                         block.breakNaturally();
                         block.setType(Material.WHEAT);
+                        if (city != null) {
+                            city.addResource(Material.WHEAT, 1);
+                        }
                         plugin.getLogger().info("NPC " + uuid + " harvested wheat.");
                         return;
                     }
@@ -147,9 +166,26 @@ public class NPC {
         if (Boolean.parseBoolean(taskParameters.getOrDefault("built", "false"))) {
             return;
         }
+        if (city == null) {
+            plugin.getLogger().warning("Builder NPC has no city assigned.");
+            return;
+        }
+        int logsRequired = 100;
+        int stoneRequired = 20;
+        int wheatRequired = 10;
+        boolean hasLogs = city.getResource(Material.OAK_LOG) >= logsRequired;
+        boolean hasStone = city.getResource(Material.STONE) >= stoneRequired;
+        boolean hasWheat = city.getResource(Material.WHEAT) >= wheatRequired;
+        if (!(hasLogs && hasStone && hasWheat)) {
+            plugin.getLogger().info("NPC " + uuid + " lacks resources to build.");
+            return;
+        }
+        city.consumeResource(Material.OAK_LOG, logsRequired);
+        city.consumeResource(Material.STONE, stoneRequired);
+        city.consumeResource(Material.WHEAT, wheatRequired);
         buildSimpleHouse(villager.getLocation());
         taskParameters.put("built", "true");
-        plugin.getLogger().info("NPC " + uuid + " built a house.");
+        plugin.getLogger().info("NPC " + uuid + " built a house using city resources.");
     }
 
     private void buildSimpleHouse(Location base) {
