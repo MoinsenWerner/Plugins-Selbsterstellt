@@ -1,5 +1,6 @@
 # Ignore Maven build output
 living/target/
+chrono/target/
 # Ignore IDE files
 *.iml
 .idea/

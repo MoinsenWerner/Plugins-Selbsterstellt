@@ -17,8 +17,14 @@ if ! command -v mvn >/dev/null 2>&1; then
     sudo apt-get install -y maven
 fi
 
-cd "$(dirname "$0")/living"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-mvn -B package
+for module in living chrono; do
+    if [ -d "$SCRIPT_DIR/$module" ]; then
+        cd "$SCRIPT_DIR/$module"
+        mvn -B package
+        cd "$SCRIPT_DIR"
+    fi
+done
 
-echo "Build completed. The plugin jar can be found in living/target."
+echo "Build completed. Plugin jars can be found in each module's target directory."
