@@ -475,9 +475,7 @@ public class NPC {
         base.clone().add(doorX, 2, 0).getBlock().setType(Material.AIR);
         base.clone().add(doorX, 1, 0).getBlock().setType(doorMat);
 
-        // Place bed inside the house
         base.clone().add(1, 1, 1).getBlock().setType(bedMat);
-
         for (int x = 0; x < width; x++) {
             for (int z = 0; z < length; z++) {
                 base.clone().add(x, height, z).getBlock().setType(roofMat);

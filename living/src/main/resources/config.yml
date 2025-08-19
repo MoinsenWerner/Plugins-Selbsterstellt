@@ -31,6 +31,7 @@ miner:
   blocks:                # Liste der Blöcke, die Miner abbauen können
     - STONE
     - SAND
+    - COBBLESTONE
 
 farmer:
   harvest:               # Erntebare Pflanzen für Farmer
