@@ -19,7 +19,7 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-for module in living chrono; do
+for module in living chrono nations; do
     if [ -d "$SCRIPT_DIR/$module" ]; then
         cd "$SCRIPT_DIR/$module"
         mvn -B package

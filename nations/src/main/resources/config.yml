@@ -1,0 +1,13 @@
+# Konfiguration für das Nations-Plugin
+
+limits:
+  max-citizens: 50          # Maximale Anzahl an Bürgern in einer Nation.
+  max-territory-chunks: 100 # Maximale Anzahl an Chunks, die eine Nation beanspruchen darf.
+
+war:
+  enabled: true             # Ob Kriege zwischen Nationen erlaubt sind.
+  declare-cost: 0           # Platzhalterwert für die Kosten einer Kriegserklärung.
+
+diplomacy:
+  default-relation: NEUTRAL # Standard-Beziehungsstatus zwischen neu gegründeten Nationen.
+

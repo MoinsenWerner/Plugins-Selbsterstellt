@@ -46,13 +46,22 @@ public class NationCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage("Nation already exists.");
                     return true;
                 }
-                registry.createNation(name, player.getUniqueId());
+                Nation nation = registry.createNation(name, player.getUniqueId());
+                for (Nation other : registry.getNations()) {
+                    if (other != nation) {
+                        plugin.getDiplomacyManager().setRelation(nation, other, plugin.getDefaultRelation());
+                    }
+                }
                 sender.sendMessage("Nation " + name + " created.");
             }
             case "claim" -> {
                 Nation nation = registry.getNationByMember(player.getUniqueId());
                 if (nation == null) {
                     sender.sendMessage("You are not part of a nation.");
+                    return true;
+                }
+                if (nation.getTerritory().size() >= plugin.getMaxTerritory()) {
+                    sender.sendMessage("Your nation has reached the territory limit.");
                     return true;
                 }
                 Chunk chunk = player.getLocation().getChunk();
