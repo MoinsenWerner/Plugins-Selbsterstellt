@@ -1,0 +1,20 @@
+name: Chrono
+version: 0.1.0
+main: net.timeux.chrono.ChronoPlugin
+api-version: 1.21
+commands:
+  chronosnapshot:
+    description: Snapshot einer Welt erstellen
+    usage: /chronosnapshot <name>
+    permission: chrono.snapshot
+  chronoportal:
+    description: Teleportiere zu einem Snapshot oder zurück
+    usage: /chronoportal <snapshot|return>
+    permission: chrono.portal
+permissions:
+  chrono.snapshot:
+    description: Erlaube Erstellen von Snapshots
+    default: op
+  chrono.portal:
+    description: Erlaube Nutzung von Chrono-Portalen
+    default: true
