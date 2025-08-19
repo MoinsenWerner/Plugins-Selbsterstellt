@@ -406,7 +406,6 @@ public class NPC {
                                 amount -= take;
                             }
                         }
-                        chest.update();
                     }
                 }
             }
@@ -431,7 +430,6 @@ public class NPC {
                         Inventory inv = chest.getBlockInventory();
                         ItemStack toAdd = new ItemStack(material, remaining);
                         Map<Integer, ItemStack> leftover = inv.addItem(toAdd);
-                        chest.update();
                         if (leftover.isEmpty()) {
                             return;
                         }
